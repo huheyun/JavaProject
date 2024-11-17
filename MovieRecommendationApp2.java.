@@ -1,0 +1,117 @@
+import java.io.*;
+import java.util.*;
+
+public class MovieRecommendationApp {
+    private static final String USER_DATA_FILE = "users.txt";
+    private static List<Movie> movies = new ArrayList<>();
+    private static Scanner scanner = new Scanner(System.in);
+
+    public static void main(String[] args) {
+        initializeMovies();
+        while (true) {
+            System.out.println("\n===== 영화 추천 프로그램 =====");
+            System.out.println("1. 로그인");
+            System.out.println("2. 회원가입");
+            System.out.println("3. 종료");
+            System.out.print("메뉴를 선택하세요: ");
+
+            int choice = scanner.nextInt();
+            scanner.nextLine(); // 줄바꿈 문자 제거
+
+            switch (choice) {
+                case 1 -> login();
+                case 2 -> register();
+                case 3 -> {
+                    System.out.println("프로그램을 종료합니다.");
+                    return;
+                }
+                default -> System.out.println("잘못된 입력입니다. 다시 시도하세요.");
+            }
+        }
+    }
+
+    private static void initializeMovies() {
+        movies.add(new Movie("인셉션", "액션"));
+        movies.add(new Movie("인터스텔라", "SF"));
+        movies.add(new Movie("기생충", "드라마"));
+        movies.add(new Movie("아이언맨", "액션"));
+        movies.add(new Movie("조커", "드라마"));
+        movies.add(new Movie("어벤져스", "액션"));
+    }
+
+    private static void login() {
+        System.out.print("아이디를 입력하세요: ");
+        String userId = scanner.nextLine();
+
+        User user = findUserById(userId);
+        if (user != null) {
+            System.out.print("비밀번호를 입력하세요: ");
+            String password = scanner.nextLine();
+            if (user.getPassword().equals(password)) {
+                System.out.println("로그인 성공!");
+                showRecommendation(user);
+            } else {
+                System.out.println("비밀번호가 일치하지 않습니다.");
+            }
+        } else {
+            System.out.println("존재하지 않는 아이디입니다.");
+        }
+    }
+
+    private static void register() {
+        System.out.print("새로운 아이디를 입력하세요: ");
+        String userId = scanner.nextLine();
+
+        if (findUserById(userId) != null) {
+            System.out.println("이미 존재하는 아이디입니다.");
+            return;
+        }
+
+        System.out.print("비밀번호를 입력하세요: ");
+        String password = scanner.nextLine();
+        User user = new User(userId, password);
+
+        System.out.println("선호 장르를 쉼표로 구분하여 입력하세요 (예: 액션,드라마,SF): ");
+        String[] genres = scanner.nextLine().split(",");
+        for (String genre : genres) {
+            user.addFavoriteGenre(genre.trim());
+        }
+
+        saveUserToFile(user);
+        System.out.println("회원가입이 완료되었습니다!");
+    }
+
+    private static void showRecommendation(User user) {
+        System.out.println("\n===== 추천 영화 =====");
+        for (Movie movie : movies) {
+            if (user.getFavoriteGenres().contains(movie.getGenre())) {
+                System.out.println("- " + movie.getTitle() + " (" + movie.getGenre() + ")");
+            }
+        }
+    }
+
+    private static User findUserById(String userId) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(USER_DATA_FILE))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] userData = line.split(",");
+                if (userData[0].equals(userId)) {
+                    List<String> genres = userData.length > 2 ? List.of(userData[2].split("\\|")) : new ArrayList<>();
+                    return new User(userData[0], userData[1], genres);
+                }
+            }
+        } catch (IOException e) {
+            System.out.println("파일을 읽는 도중 오류가 발생했습니다.");
+        }
+        return null;
+    }
+
+    private static void saveUserToFile(User user) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(USER_DATA_FILE, true))) {
+            writer.write(user.getUserId() + "," + user.getPassword() + "," + user.getGenresAsString());
+            writer.newLine();
+        } catch (IOException e) {
+            System.out.println("파일에 저장하는 도중 오류가 발생했습니다.");
+        }
+    }
+}
