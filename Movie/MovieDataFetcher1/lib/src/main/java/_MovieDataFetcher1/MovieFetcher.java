@@ -1,4 +1,3 @@
-
 package _MovieDataFetcher1;
 
 import okhttp3.OkHttpClient;
@@ -12,7 +11,7 @@ public class MovieFetcher {
     public static String fetchMovies() throws Exception {
         OkHttpClient client = new OkHttpClient();
 
-        String url = API_URL + "?sort_by=popularity.desc&api_key=" + API_KEY + "&language=ko-KR&page=1";
+        String url = API_URL + "?sort_by=popularity.desc&api_key=" + API_KEY + "&language=ko-KR";
 
         Request request = new Request.Builder()
                 .url(url)

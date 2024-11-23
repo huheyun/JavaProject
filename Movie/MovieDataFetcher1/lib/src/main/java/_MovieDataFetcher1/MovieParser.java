@@ -1,12 +1,13 @@
 package _MovieDataFetcher1;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class MovieParser {
+
     public static List<Movie> parseMovies(String jsonResponse) throws Exception {
         ObjectMapper mapper = new ObjectMapper();
         JsonNode root = mapper.readTree(jsonResponse);
@@ -17,7 +18,6 @@ public class MovieParser {
             Movie movie = new Movie();
             movie.setId(node.get("id").asInt());
             movie.setTitle(node.get("title").asText());
-            movie.setReleaseDate(node.get("release_date").asText());
             movie.setVoteAverage(node.get("vote_average").asDouble());
             movie.setOverview(node.get("overview").asText());
 
