@@ -5,13 +5,23 @@ import java.util.List;
 
 public class ContentBasedRecommender {
 
-    // 선택한 영화와 비슷한 영화 추천
-    public List<Movie> recommend(List<Movie> movies, Movie targetMovie) {
+    // 사용자 선호를 기반으로 영화 추천
+    public List<Movie> recommend(List<Movie> movies, User user) {
         List<Movie> recommendations = new ArrayList<>();
 
+        // 사용자 선호 정보
+        List<String> preferredGenres = user.getFavoriteGenresAsList();
+        List<String> preferredActors = user.getFavoriteActorsAsList();
+        List<String> preferredDirectors = user.getFavoriteDirectorsAsList();
+
+        // 영화 데이터를 기반으로 추천
         for (Movie movie : movies) {
-            // 같은 영화를 제외하고, 장르가 겹치는 영화 추천
-            if (!movie.equals(targetMovie) && hasCommonGenres(movie, targetMovie)) {
+            boolean matchesGenre = matchesAny(preferredGenres, movie.getGenreNames());
+            boolean matchesActor = matchesAny(preferredActors, movie.getActors());
+            boolean matchesDirector = preferredDirectors.contains(movie.getDirector());
+
+            // 하나 이상의 조건에 부합하면 추천
+            if (matchesGenre || matchesActor || matchesDirector) {
                 recommendations.add(movie);
             }
         }
@@ -19,11 +29,13 @@ public class ContentBasedRecommender {
         return recommendations;
     }
 
-    // 두 영화의 장르가 겹치는지 확인
-    private boolean hasCommonGenres(Movie movie1, Movie movie2) {
-        for (int genreId : movie1.getGenreIds()) {
-            if (movie2.getGenreIds().contains(genreId)) {
-                return true;
+    // 리스트 간의 일치 여부 확인 (대소문자 무시)
+    private boolean matchesAny(List<String> preferredList, List<String> movieList) {
+        for (String preferred : preferredList) {
+            for (String item : movieList) {
+                if (preferred.equalsIgnoreCase(item)) {
+                    return true;
+                }
             }
         }
         return false;

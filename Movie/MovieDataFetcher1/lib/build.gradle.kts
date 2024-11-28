@@ -21,6 +21,7 @@ dependencies {
     implementation("com.fasterxml.jackson.core:jackson-databind:2.15.2") // Jackson Databind
 	implementation("org.openjfx:javafx-controls:20") // JavaFX 버전
     implementation("org.openjfx:javafx-fxml:20")
+    implementation("mysql:mysql-connector-java:8.0.33")
 }
 
 java {

@@ -1,91 +1,103 @@
 package _MovieDataFetcher1;
 
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class MainClass {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
 
+        // 사용자 이름 입력
+        System.out.println("사용자의 이름을 입력하세요:");
+        String userName = scanner.nextLine();
+        System.out.println("환영합니다, " + userName + "님!");
+
         try {
-            // TMDb API에서 영화 데이터 가져오기
-            String jsonResponse = MovieFetcher.fetchMovies();
-            List<Movie> movies = MovieParser.parseMovies(jsonResponse);
+            // 1. TMDb에서 장르 데이터 가져오기
+            Map<Integer, String> genreMap = GenreFetcher.fetchGenres();
+            List<String> genres = new ArrayList<>(genreMap.values());
 
-            while (true) {
-                // 메뉴 표시
-                System.out.println("\n=== 영화 추천 프로그램 ===");
-                System.out.println("1. 인기 영화 TOP 5 보기");
-                System.out.println("2. 영화 추천 받기");
-                System.out.println("0. 프로그램 종료");
-                System.out.print("선택: ");
+            // 사용자 선호 장르 선택
+            System.out.println("선호하는 장르를 선택하세요 (쉼표로 구분하여 여러 개 선택 가능):");
+            for (int i = 0; i < genres.size(); i++) {
+                System.out.println((i + 1) + ". " + genres.get(i));
+            }
+            System.out.print("선호 장르 번호 입력: ");
+            String genreChoices = scanner.nextLine();
+            List<String> selectedGenres = Arrays.stream(genreChoices.split(","))
+                    .map(choice -> genres.get(Integer.parseInt(choice.trim()) - 1))
+                    .collect(Collectors.toList());
 
-                int choice = scanner.nextInt();
+            // 2. TMDb에서 영화 데이터 가져오기
+            MovieFetcher fetcher = new MovieFetcher();
+            String movieJson = fetcher.fetchMovies(1); // 페이지 1의 영화 데이터 가져오기
+            MovieParser parser = new MovieParser();
+            List<Movie> movies = parser.parseMovies(movieJson, genreMap);
 
-                switch (choice) {
-                    case 1:
-                        // 인기 영화 TOP 5 출력
-                        showTopMovies(movies);
-                        break;
-
-                    case 2:
-                        // 추천 기능 실행
-                        recommendMovies(movies, scanner);
-                        break;
-
-                    case 0:
-                        // 프로그램 종료
-                        System.out.println("프로그램을 종료합니다.");
-                        scanner.close();
-                        return;
-
-                    default:
-                        System.out.println("잘못된 입력입니다. 다시 선택해주세요.");
+            // 배우 및 감독 목록 생성
+            Set<String> actorSet = new HashSet<>();
+            Set<String> directorSet = new HashSet<>();
+            for (Movie movie : movies) {
+                actorSet.addAll(movie.getActors());
+                if (movie.getDirector() != null) {
+                    directorSet.add(movie.getDirector());
                 }
             }
+
+            List<String> actors = new ArrayList<>(actorSet);
+            List<String> directors = new ArrayList<>(directorSet);
+
+            // 사용자 선호 배우 선택 (랜덤 5명)
+            System.out.println("선호하는 배우를 선택하세요 (쉼표로 구분하여 여러 개 선택 가능, 없으면 'x' 입력):");
+            List<String> randomActors = getRandomSubList(actors, 5);
+            for (int i = 0; i < randomActors.size(); i++) {
+                System.out.println((i + 1) + ". " + randomActors.get(i));
+            }
+            System.out.print("선호 배우 번호 입력: ");
+            String actorChoices = scanner.nextLine();
+            List<String> selectedActors = actorChoices.equalsIgnoreCase("x") ? new ArrayList<>()
+                    : Arrays.stream(actorChoices.split(","))
+                            .map(choice -> randomActors.get(Integer.parseInt(choice.trim()) - 1))
+                            .collect(Collectors.toList());
+
+            // 사용자 선호 감독 선택 (랜덤 5명)
+            System.out.println("선호하는 감독을 선택하세요 (쉼표로 구분하여 여러 개 선택 가능, 없으면 'x' 입력):");
+            List<String> randomDirectors = getRandomSubList(directors, 5);
+            for (int i = 0; i < randomDirectors.size(); i++) {
+                System.out.println((i + 1) + ". " + randomDirectors.get(i));
+            }
+            System.out.print("선호 감독 번호 입력: ");
+            String directorChoices = scanner.nextLine();
+            List<String> selectedDirectors = directorChoices.equalsIgnoreCase("x") ? new ArrayList<>()
+                    : Arrays.stream(directorChoices.split(","))
+                            .map(choice -> randomDirectors.get(Integer.parseInt(choice.trim()) - 1))
+                            .collect(Collectors.toList());
+
+            // 사용자 객체 생성
+            User user = new User(userName, String.join(",", selectedGenres), String.join(",", selectedActors), String.join(",", selectedDirectors));
+
+            // 3. 추천 영화 출력
+            ContentBasedRecommender recommender = new ContentBasedRecommender();
+            List<Movie> recommendedMovies = recommender.recommend(movies, user);
+
+            System.out.println("\n추천 영화 목록:");
+            for (Movie movie : recommendedMovies) {
+                System.out.println("- " + movie.getTitle() + " (" + movie.getVoteAverage() + ")");
+            }
+
         } catch (Exception e) {
-            System.out.println("오류가 발생했습니다: " + e.getMessage());
             e.printStackTrace();
         }
+
+        scanner.close();
     }
 
-    // 인기 영화 TOP 5 출력
-    private static void showTopMovies(List<Movie> movies) {
-        System.out.println("\n=== 인기 영화 TOP 5 ===");
-        for (int i = 0; i < Math.min(5, movies.size()); i++) {
-            Movie movie = movies.get(i);
-            System.out.printf("%d. %s (평점: %.1f)\n", i + 1, movie.getTitle(), movie.getVoteAverage());
+    // 랜덤으로 최대 5개의 항목 가져오기
+    private static List<String> getRandomSubList(List<String> list, int count) {
+        if (list.isEmpty()) {
+            return Collections.emptyList();
         }
-    }
-
-    // 영화 추천
-    private static void recommendMovies(List<Movie> movies, Scanner scanner) {
-        System.out.println("\n=== 추천 받을 영화 선택 ===");
-        // 인기 영화 10개를 표시
-        for (int i = 0; i < Math.min(10, movies.size()); i++) {
-            Movie movie = movies.get(i);
-            System.out.printf("%d. %s\n", i + 1, movie.getTitle());
-        }
-
-        System.out.print("추천을 받을 영화를 선택하세요 (1-10): ");
-        int selectedIndex = scanner.nextInt() - 1;
-
-        if (selectedIndex < 0 || selectedIndex >= 10) {
-            System.out.println("잘못된 선택입니다. 메뉴로 돌아갑니다.");
-            return;
-        }
-
-        Movie selectedMovie = movies.get(selectedIndex);
-        System.out.println("\n선택한 영화: " + selectedMovie.getTitle());
-
-        // 내용 기반 필터링으로 유사한 영화 추천
-        ContentBasedRecommender recommender = new ContentBasedRecommender();
-        List<Movie> recommendations = recommender.recommend(movies, selectedMovie);
-
-        System.out.println("\n=== 추천 영화 ===");
-        for (int i = 0; i < Math.min(10, recommendations.size()); i++) {
-            Movie movie = recommendations.get(i);
-            System.out.printf("%d. %s\n", i + 1, movie.getTitle());
-        }
+        Collections.shuffle(list);
+        return list.subList(0, Math.min(count, list.size()));
     }
 }
